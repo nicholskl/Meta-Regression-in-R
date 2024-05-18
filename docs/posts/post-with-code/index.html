@@ -6,10 +6,10 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Harlow Malloc">
+<meta name="author" content="Kristopher Nichols">
 <meta name="dcterms.date" content="2024-05-13">
 
-<title>Meta-Regression in R - Post With Code</title>
+<title>Meta-Regression in R - Implementing Meta-Regression with R</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -103,6 +103,35 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   }
 }</script>
 
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="../../styles.css">
 </head>
@@ -149,9 +178,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">Post With Code</h1>
+      <h1 class="title">Implementing Meta-Regression with R</h1>
                                 <div class="quarto-categories">
-                <div class="quarto-category">news</div>
                 <div class="quarto-category">code</div>
                 <div class="quarto-category">analysis</div>
               </div>
@@ -164,7 +192,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <div>
       <div class="quarto-title-meta-heading">Author</div>
       <div class="quarto-title-meta-contents">
-               <p>Harlow Malloc </p>
+               <p>Kristopher Nichols </p>
             </div>
     </div>
       
@@ -190,15 +218,758 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 
 
-<p>This is a post with executable code.</p>
+<section id="understanding-meta-analysis-a-comprehensive-overview" class="level3">
+<h3 class="anchored" data-anchor-id="understanding-meta-analysis-a-comprehensive-overview"><strong>Understanding Meta-Analysis: A Comprehensive Overview</strong></h3>
+<p>Meta-analysis is a statistical approach used to synthesize results from multiple studies to derive conclusions with greater statistical power and generalizability. By combining data from several independent studies, meta-analysis helps to resolve uncertainty when individual studies disagree and provides a more precise estimate of the effect size.</p>
+<section id="what-is-meta-analysis" class="level4">
+<h4 class="anchored" data-anchor-id="what-is-meta-analysis"><strong>What is Meta-Analysis?</strong></h4>
+<p>Meta-analysis involves systematically reviewing, extracting, and statistically combining data from a collection of studies that address a common research question. This technique enables researchers to:</p>
+<ul>
+<li><p><strong>Summarize Evidence:</strong> Meta-analysis aggregates findings, offering a comprehensive overview of what the research community knows about a particular topic.</p></li>
+<li><p><strong>Increase Power:</strong> By pooling data from multiple studies, meta-analysis enhances the statistical power to detect effects that individual studies might miss.</p></li>
+<li><p><strong>Address Variability:</strong> It helps to understand the variation in study results, identifying factors that contribute to differences across studies.</p></li>
+</ul>
+</section>
+<section id="what-does-meta-analysis-do" class="level4">
+<h4 class="anchored" data-anchor-id="what-does-meta-analysis-do"><strong>What Does Meta-Analysis Do?</strong></h4>
+<p>Meta-analysis goes beyond simple summary by:</p>
+<ol type="1">
+<li><p><strong>Estimating Overall Effect:</strong> It calculates a weighted average effect size, giving more weight to studies with larger samples or more precise estimates.</p></li>
+<li><p><strong>Exploring Heterogeneity:</strong> It assesses the degree of variability among study results to understand if differences are due to chance or other underlying factors.</p></li>
+<li><p><strong>Identifying Subgroup Effects:</strong> By stratifying data, meta-analysis can explore how effects vary across different subgroups, such as age, gender, or intervention type.</p></li>
+</ol>
+</section>
+<section id="common-problems-in-meta-analysis" class="level4">
+<h4 class="anchored" data-anchor-id="common-problems-in-meta-analysis"><strong>Common Problems in Meta-Analysis</strong></h4>
+<p>While meta-analysis is a valuable tool, it has a few challenges that can make a traditional and straightforward approach difficult. Two of the most significant problems are heterogeneity in methods and dependence among study outcomes.</p>
+<ol type="1">
+<li><p><strong>Heterogeneity in Methods:</strong> Studies included in a meta-analysis often differ in their design, populations, interventions, and outcome measures. This heterogeneity can lead to inconsistent findings and complicate the interpretation of the combined results. Identifying and accounting for these differences is crucial for a robust meta-analysis. This is particularly salient in psychology studies where papers even on a well traditioned and niche idea can vary wildly in methodology (see this famous and controversial meta-analysis on nudges for an <a href="https://www.pnas.org/doi/full/10.1073/pnas.2107346118">example</a>.</p></li>
+<li><p><strong>Dependence Among Study Outcomes:</strong> When studies use similar methodologies or populations, their outcomes may not be entirely independent. This dependence can bias the results and undermine the validity of the meta-analysis. Properly addressing dependence is essential to avoid overestimating the precision of the combined effect size. This can be true when several effect sizes might be produced from a single paper, when several effect sizes might need to be clustered by the measure that they use, or by the types of participants included, for example</p></li>
+</ol>
+</section>
+<section id="analysis-and-meta-regression" class="level4">
+<h4 class="anchored" data-anchor-id="analysis-and-meta-regression"><strong>Analysis and Meta-Regression</strong></h4>
+<p>Addressing the issues of heterogeneity and dependence is critical for a meaningful meta-analysis. One advanced technique to tackle these problems is meta-regression. Meta-regression extends traditional meta-analysis by incorporating study-level covariates, moderators, and allows for mixed-level modeling, allowing researchers to:</p>
+<ul>
+<li><p><strong>Model Heterogeneity:</strong> By including variables that might explain differences between studies, meta-regression helps to account for and understand sources of heterogeneity.</p></li>
+<li><p><strong>Adjust for Dependence:</strong> It provides a framework to adjust for potential correlations among study outcomes, ensuring more accurate and reliable results.</p></li>
+</ul>
+<p>In the next section, I will describe meta-regression in greater detail, exploring how it works and how it can be applied to enhance the insights gained from meta-analysis.</p>
+</section>
+</section>
+<section id="what-is-meta-regression" class="level2">
+<h2 class="anchored" data-anchor-id="what-is-meta-regression"><strong>What is Meta-Regression?</strong></h2>
+<p>Meta-regression is a statistical tool used in meta-analysis, where multiple studies are combined to understand a phenomenon more comprehensively. This technique is particularly valuable when studies vary significantly in terms of settings, methodologies, or populations. Meta-regression explores the relationship between study characteristics (like sample size or study quality) and study outcomes, helping to explain the heterogeneity (variability) among the results of these studies. Here, we’ll dive into the basics of meta-regression using the <strong><code>dmetar</code></strong> and <strong><code>metafor</code></strong> packages and the <strong><code>MVRegressionData</code></strong> dataset in R.</p>
+<p><img src="images/clipboard-4231681675.png" class="img-fluid"></p>
+<p>Meta-regression is an extension of the standard meta-analysis, allowing researchers to investigate how study-level covariates impact the effect size (the quantitative measure of the magnitude of the experimental effect). For instance, in clinical research, larger studies might show different effect sizes compared to smaller studies due to systematic differences in patient selection or treatment implementation. In psychology studies, where methodological variance between studies can be substantial, it can be difficult to collapse across several studies as the differences in design may affect the effect sizes and drive unexplained variance.</p>
+</section>
+<section id="basic-concept-of-meta-regression" class="level2">
+<h2 class="anchored" data-anchor-id="basic-concept-of-meta-regression">Basic Concept of Meta-Regression</h2>
+<p>Meta-regression models the effect size from each study as a function of study-level characteristics (covariates). It essentially extends the random-effects model in meta-analysis by incorporating these covariates to explain variations in the effect sizes.</p>
+</section>
+<section id="the-meta-regression-model" class="level2">
+<h2 class="anchored" data-anchor-id="the-meta-regression-model">The Meta-Regression Model</h2>
+<p>The meta-regression model can be represented as:</p>
+<p><span class="math display">\[
+\theta_k = \theta + \beta x_k + \epsilon_k + \zeta_k
+\]</span></p>
+<p>Where, <span class="math inline">\(\theta_k\)</span> is the observed effect size in the \(k\)-th study. <span class="math inline">\(\theta\)</span> is the overall average effect size across all studies, serving as the intercept in the meta-regression model. This represents the expected effect size when all covariates are zero. <span class="math inline">\(\beta\)</span> is the regression coefficient that quantifies the relationship between the study-level covariate <span class="math inline">\(x_k\)</span> and the effect size <span class="math inline">\(\theta_k\)</span>. It indicates how much the effect size changes for a one-unit change in the covariate. <span class="math inline">\(x_k\)</span> is the <span class="math inline">\(k\)</span>-th study-level covariate. This could be any characteristic of the study, such as sample size, study design, or population characteristics, that might influence the effect size.</p>
+<p><span class="math inline">\(\epsilon_k\)</span> is the within-study error term, capturing the sampling variability or random error in the effect size estimate for the <span class="math inline">\(k\)</span>-th study. This term accounts for the fact that even studies with the same covariate value may have different observed effect sizes due to random sampling variation. <span class="math inline">\(\zeta_k\)</span> is the between-study error term, representing the residual heterogeneity not explained by the covariates. This term captures the variability in effect sizes that is attributable to unmeasured or unknown factors.</p>
+<p>Meta-regression supports both categorical and continuous predictors, can be setup in a way that researchers familiar with regression should be used to, and also supports mixed-effect modeling, allowing for random intercept of study data (e.g., study ID) to model dependency in effect sizes.</p>
+</section>
+<section id="steps-in-conducting-meta-regression" class="level2">
+<h2 class="anchored" data-anchor-id="steps-in-conducting-meta-regression">Steps in Conducting Meta-Regression</h2>
+<ol type="1">
+<li><strong>Data Collection and Coding:</strong>
+<ul>
+<li>Collect effect sizes (e.g., mean differences, odds ratios) from each study.</li>
+<li>Gather study-level covariates that might explain heterogeneity (e.g., sample size, study design, population characteristics).</li>
+</ul></li>
+<li><strong>Model Specification:</strong>
+<ul>
+<li>Specify the meta-regression model, including the intercept and covariates of interest.</li>
+<li>Choose between fixed-effects and random-effects models. The random-effects model is more common as it accounts for both within-study and between-study variability.</li>
+</ul></li>
+<li><strong>Estimation:</strong>
+<ul>
+<li>Estimate the model parameters <span class="math inline">\(\beta_j\)</span> using weighted least squares or maximum likelihood methods. The weights are typically the inverse of the variance of the effect size estimates, giving more weight to more precise studies.</li>
+</ul></li>
+<li><strong>Interpretation:</strong>
+<ul>
+<li>Interpret the coefficients <span class="math inline">\(\beta_j\)</span>. A significant <span class="math inline">\(\beta_j\)</span> <em>indicates that the corresponding covariate</em> <span class="math inline">\(X{ij}\)</span> explains some of the variability in effect sizes.</li>
+<li>Assess the residual heterogeneity <span class="math inline">\(u_i\)</span> to see how much variation remains unexplained.</li>
+</ul></li>
+</ol>
+</section>
+<section id="key-statistical-considerations" class="level2">
+<h2 class="anchored" data-anchor-id="key-statistical-considerations">Key Statistical Considerations</h2>
+<ul>
+<li><strong>Heterogeneity Assessment:</strong>
+<ul>
+<li>Quantify the residual heterogeneity after accounting for covariates using <span class="math inline">\(\tau^2\)</span>, the between-study variance.</li>
+<li>Use <span class="math inline">\(I^2\)</span> statistics to describe the proportion of total variability due to heterogeneity rather than sampling error.</li>
+</ul></li>
+<li><strong>Model Fit and Diagnostics:</strong>
+<ul>
+<li>Evaluate the fit of the meta-regression model using goodness-of-fit statistics.</li>
+<li>Check for potential multicollinearity among covariates, which can inflate the variance of coefficient estimates.</li>
+<li>Conduct sensitivity analyses to assess the robustness of the results.</li>
+</ul></li>
+<li><strong>Dependence Adjustment:</strong>
+<ul>
+<li>If study outcomes are correlated, adjust for this dependence within the meta-regression framework to avoid biased estimates.</li>
+<li>Use cluster-robust standard errors or multilevel models if there are multiple effect sizes from the same study.</li>
+</ul></li>
+</ul>
+</section>
+<section id="advantages-of-meta-regression" class="level2">
+<h2 class="anchored" data-anchor-id="advantages-of-meta-regression">Advantages of Meta-Regression</h2>
+<ul>
+<li><strong>Enhanced Understanding:</strong> By incorporating covariates, meta-regression helps to identify and quantify factors contributing to heterogeneity.</li>
+<li><strong>Improved Accuracy:</strong> Adjusting for study-level characteristics and dependencies leads to more accurate and reliable estimates of the overall effect size.</li>
+<li><strong>Flexibility:</strong> Meta-regression can accommodate continuous, categorical, and interaction terms, providing a flexible approach to exploring complex relationships. Moreover, a traditional meta-analysis does not account for dependency across effect sizes as nimbly as meta-regression does, with meta-regression offering multiple avenues for correcting dependency (mixed-effects models, clustering standard errors, cluster wild bootstrapping).</li>
+</ul>
+</section>
+<section id="practical-example-using-dmetar-and-dat.bcg" class="level2">
+<h2 class="anchored" data-anchor-id="practical-example-using-dmetar-and-dat.bcg"><strong>Practical Example Using <code>dmetar</code> and <code>dat.bcg</code></strong></h2>
+<p>To illustrate, let’s use the <code>metafor</code> and <strong><code>dmetar</code></strong> package in R, which is designed for conducting robust meta-analyses, including meta-regression. The datasets included in these packages will serve as our example data.</p>
+<section id="setting-up-the-environment" class="level3">
+<h3 class="anchored" data-anchor-id="setting-up-the-environment"><strong>Setting Up the Environment</strong></h3>
+<p>First, you’ll need to install and load the packages. If you haven’t installed it yet, you can do so using the following commands in R:</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="dv">1</span> <span class="sc">+</span> <span class="dv">1</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">#install.packages("dmetar")</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dmetar)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(metafor)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(kableExtra)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyverse)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"MVRegressionData"</span>, <span class="at">package =</span> <span class="st">"dmetar"</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"dat.bcg"</span>, <span class="at">package =</span> <span class="st">"metafor"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>This dataset includes multiple variables, but we will focus on the effect sizes and a few key covariates for our meta-regression analysis.</p>
+<p>First we take a look at the data where in addition to the trial number, author(s), and publication year, the dataset contains details about the number of treated (vaccinated) subjects who tested positive and negative for tuberculosis (tpos and tneg, respectively), as well as the number of control (non-vaccinated) subjects who were tuberculosis positive and negative (cpos and cneg, respectively). Furthermore, the dataset includes the absolute latitude of the study location (in degrees) and the treatment allocation method used (random, alternate, or systematic assignment) for each trial.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(dat.bcg, <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 29%">
+<col style="width: 7%">
+<col style="width: 7%">
+<col style="width: 8%">
+<col style="width: 7%">
+<col style="width: 8%">
+<col style="width: 8%">
+<col style="width: 15%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">trial</th>
+<th style="text-align: left;">author</th>
+<th style="text-align: right;">year</th>
+<th style="text-align: right;">tpos</th>
+<th style="text-align: right;">tneg</th>
+<th style="text-align: right;">cpos</th>
+<th style="text-align: right;">cneg</th>
+<th style="text-align: right;">ablat</th>
+<th style="text-align: left;">alloc</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">Aronson</td>
+<td style="text-align: right;">1948</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">119</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">128</td>
+<td style="text-align: right;">44</td>
+<td style="text-align: left;">random</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">Ferguson &amp; Simes</td>
+<td style="text-align: right;">1949</td>
+<td style="text-align: right;">6</td>
+<td style="text-align: right;">300</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">274</td>
+<td style="text-align: right;">55</td>
+<td style="text-align: left;">random</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">Rosenthal et al</td>
+<td style="text-align: right;">1960</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">228</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">209</td>
+<td style="text-align: right;">42</td>
+<td style="text-align: left;">random</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">Hart &amp; Sutherland</td>
+<td style="text-align: right;">1977</td>
+<td style="text-align: right;">62</td>
+<td style="text-align: right;">13536</td>
+<td style="text-align: right;">248</td>
+<td style="text-align: right;">12619</td>
+<td style="text-align: right;">52</td>
+<td style="text-align: left;">random</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">Frimodt-Moller et al</td>
+<td style="text-align: right;">1973</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: right;">5036</td>
+<td style="text-align: right;">47</td>
+<td style="text-align: right;">5761</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">alternate</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">Stein &amp; Aronson</td>
+<td style="text-align: right;">1953</td>
+<td style="text-align: right;">180</td>
+<td style="text-align: right;">1361</td>
+<td style="text-align: right;">372</td>
+<td style="text-align: right;">1079</td>
+<td style="text-align: right;">44</td>
+<td style="text-align: left;">alternate</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Vandiviere et al</td>
+<td style="text-align: right;">1973</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">2537</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">619</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: left;">random</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">TPT Madras</td>
+<td style="text-align: right;">1980</td>
+<td style="text-align: right;">505</td>
+<td style="text-align: right;">87886</td>
+<td style="text-align: right;">499</td>
+<td style="text-align: right;">87892</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">random</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Coetzee &amp; Berjak</td>
+<td style="text-align: right;">1968</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">7470</td>
+<td style="text-align: right;">45</td>
+<td style="text-align: right;">7232</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: left;">random</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">10</td>
+<td style="text-align: left;">Rosenthal et al</td>
+<td style="text-align: right;">1961</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">1699</td>
+<td style="text-align: right;">65</td>
+<td style="text-align: right;">1600</td>
+<td style="text-align: right;">42</td>
+<td style="text-align: left;">systematic</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Comstock et al</td>
+<td style="text-align: right;">1974</td>
+<td style="text-align: right;">186</td>
+<td style="text-align: right;">50448</td>
+<td style="text-align: right;">141</td>
+<td style="text-align: right;">27197</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: left;">systematic</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">12</td>
+<td style="text-align: left;">Comstock &amp; Webster</td>
+<td style="text-align: right;">1969</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">2493</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">2338</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: left;">systematic</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">Comstock et al</td>
+<td style="text-align: right;">1976</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">16886</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">17825</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: left;">systematic</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>For these particular data the main outcome is binary, positive or negative, so we will be dealing with log of relative risk. The first step in meta-regression (and meta-analysis, generally) is obtaining effect size and variance statistics <span class="math inline">\(y_i\)</span> and <span class="math inline">\(v_i\)</span>. These are the primary units of analysis for most functions in <code>metafor</code>, and can be handled easily via the <code>escalc</code> function from <code>metafor</code>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>data_es <span class="ot">&lt;-</span> <span class="fu">escalc</span>(<span class="at">measure =</span> <span class="st">"RR"</span>, <span class="at">ai =</span> tpos, <span class="at">bi =</span> tneg, <span class="at">ci =</span> cpos, </span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>              <span class="at">di =</span> cneg, <span class="at">data =</span> dat.bcg, <span class="at">append =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(data_es[,<span class="sc">-</span><span class="fu">c</span>(<span class="dv">4</span><span class="sc">:</span><span class="dv">7</span>)], <span class="at">row.names =</span> <span class="cn">FALSE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 30%">
+<col style="width: 7%">
+<col style="width: 8%">
+<col style="width: 15%">
+<col style="width: 15%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: right;">trial</th>
+<th style="text-align: left;">author</th>
+<th style="text-align: right;">year</th>
+<th style="text-align: right;">ablat</th>
+<th style="text-align: left;">alloc</th>
+<th style="text-align: right;">yi</th>
+<th style="text-align: right;">vi</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">1</td>
+<td style="text-align: left;">Aronson</td>
+<td style="text-align: right;">1948</td>
+<td style="text-align: right;">44</td>
+<td style="text-align: left;">random</td>
+<td style="text-align: right;">-0.8893113</td>
+<td style="text-align: right;">0.3255848</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2</td>
+<td style="text-align: left;">Ferguson &amp; Simes</td>
+<td style="text-align: right;">1949</td>
+<td style="text-align: right;">55</td>
+<td style="text-align: left;">random</td>
+<td style="text-align: right;">-1.5853887</td>
+<td style="text-align: right;">0.1945811</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">3</td>
+<td style="text-align: left;">Rosenthal et al</td>
+<td style="text-align: right;">1960</td>
+<td style="text-align: right;">42</td>
+<td style="text-align: left;">random</td>
+<td style="text-align: right;">-1.3480731</td>
+<td style="text-align: right;">0.4153680</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">4</td>
+<td style="text-align: left;">Hart &amp; Sutherland</td>
+<td style="text-align: right;">1977</td>
+<td style="text-align: right;">52</td>
+<td style="text-align: left;">random</td>
+<td style="text-align: right;">-1.4415512</td>
+<td style="text-align: right;">0.0200100</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">5</td>
+<td style="text-align: left;">Frimodt-Moller et al</td>
+<td style="text-align: right;">1973</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">alternate</td>
+<td style="text-align: right;">-0.2175473</td>
+<td style="text-align: right;">0.0512102</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">6</td>
+<td style="text-align: left;">Stein &amp; Aronson</td>
+<td style="text-align: right;">1953</td>
+<td style="text-align: right;">44</td>
+<td style="text-align: left;">alternate</td>
+<td style="text-align: right;">-0.7861156</td>
+<td style="text-align: right;">0.0069056</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">7</td>
+<td style="text-align: left;">Vandiviere et al</td>
+<td style="text-align: right;">1973</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: left;">random</td>
+<td style="text-align: right;">-1.6208982</td>
+<td style="text-align: right;">0.2230172</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">8</td>
+<td style="text-align: left;">TPT Madras</td>
+<td style="text-align: right;">1980</td>
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">random</td>
+<td style="text-align: right;">0.0119523</td>
+<td style="text-align: right;">0.0039616</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">9</td>
+<td style="text-align: left;">Coetzee &amp; Berjak</td>
+<td style="text-align: right;">1968</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: left;">random</td>
+<td style="text-align: right;">-0.4694176</td>
+<td style="text-align: right;">0.0564342</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">10</td>
+<td style="text-align: left;">Rosenthal et al</td>
+<td style="text-align: right;">1961</td>
+<td style="text-align: right;">42</td>
+<td style="text-align: left;">systematic</td>
+<td style="text-align: right;">-1.3713448</td>
+<td style="text-align: right;">0.0730248</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">11</td>
+<td style="text-align: left;">Comstock et al</td>
+<td style="text-align: right;">1974</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: left;">systematic</td>
+<td style="text-align: right;">-0.3393588</td>
+<td style="text-align: right;">0.0124122</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">12</td>
+<td style="text-align: left;">Comstock &amp; Webster</td>
+<td style="text-align: right;">1969</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: left;">systematic</td>
+<td style="text-align: right;">0.4459134</td>
+<td style="text-align: right;">0.5325058</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">13</td>
+<td style="text-align: left;">Comstock et al</td>
+<td style="text-align: right;">1976</td>
+<td style="text-align: right;">33</td>
+<td style="text-align: left;">systematic</td>
+<td style="text-align: right;">-0.0173139</td>
+<td style="text-align: right;">0.0714047</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+<section id="conducting-meta-regression" class="level3">
+<h3 class="anchored" data-anchor-id="conducting-meta-regression"><strong>Conducting Meta-Regression</strong></h3>
+<p>For performing regression, I use the <strong><code>rma</code></strong> class of functions from the <strong><code>metafor</code></strong> package to regress the effect sizes on some of the covariates included in our dataset. The rma function is the workhorse of the metafor package for meta-regression and has a few flexible variants, including <code>rma.mv</code> for mixed-effect/multivariate linear modeling. The normal random-effects regression model can be fit with <code>rma(yi, vi, data = dat)</code>.</p>
+<p>Many R users will be familiar with the formula syntax used in functions like <strong><code>lm()</code></strong> and <strong><code>glm()</code></strong>. Similarly, one can specify the desired meta-analytic model using the <strong><code>mods</code></strong> argument, which accepts a formula in the form <strong><code>~ model</code></strong> (e.g., <strong><code>mods = ~ mod1 + mod2 + mod3</code></strong>). This approach allows for the easy addition of interactions, polynomial terms, and factors to the model. A fixed-effects model can be fitted with <strong><code>rma(yi, vi, data = dat, method = "FE")</code></strong>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Running the meta-regression model</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>model_1 <span class="ot">&lt;-</span> <span class="fu">rma</span>(yi, vi, <span class="at">data =</span> data_es)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(model_1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1] 2</code></pre>
+<pre><code>
+Random-Effects Model (k = 13; tau^2 estimator: REML)
+
+  logLik  deviance       AIC       BIC      AICc   
+-12.2024   24.4047   28.4047   29.3746   29.7381   
+
+tau^2 (estimated amount of total heterogeneity): 0.3132 (SE = 0.1664)
+tau (square root of estimated tau^2 value):      0.5597
+I^2 (total heterogeneity / total variability):   92.22%
+H^2 (total variability / sampling variability):  12.86
+
+Test for Heterogeneity:
+Q(df = 12) = 152.2330, p-val &lt; .0001
+
+Model Results:
+
+estimate      se     zval    pval    ci.lb    ci.ub      
+ -0.7145  0.1798  -3.9744  &lt;.0001  -1.0669  -0.3622  *** 
+
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
 </div>
 </div>
+<p>The estimated between-study variance (𝜏2τ2) was 0.3132 (SE = 0.1664), with the square root of this variance (𝜏τ) being 0.5597. This high 𝜏τ value indicates considerable variability in effect sizes across studies. The <span class="math inline">\(I^2\)</span> statistic, which represents the percentage of total variation due to heterogeneity rather than chance, was 92.22% which is a fairly high value. <a href="https://handbook-5-1.cochrane.org/chapter_9/9_5_2_identifying_and_measuring_heterogeneity.htm">Here’s</a> a general rule of thumb for interpreting these values where anything over .75 (75%) could be considered as considerable heterogeneity between studies. This substantial heterogeneity suggests that differences between studies contribute significantly to the variability in effect sizes. Furthermore, the <span class="math inline">\(H^2\)</span> statistic, which compares total variability to sampling variability, was 12.86, indicating that the observed variability greatly exceeds what would be expected by sampling error alone.</p>
+<p>The test for heterogeneity was significant (𝑄(12)=152.23Q(12)=152.23, 𝑝&lt;.0001), confirming the presence of substantial heterogeneity among the studies. This suggests that the effect sizes are not consistent across studies and that additional factors may influence the variability.</p>
+<p>The model results showed an overall effect size estimate (log relative risk) of -0.7145 (SE = 0.1798). Transforming these values with the <code>exp()</code> function, we get a value of .49 with a 95% CI of (0.34, 0.70). The negative estimate indicates that the vaccinated group had a lower risk of tuberculosis infection compared to the control group. Moreover, for the vaccinated subjects there was nearly half the risk of getting tuberculosis. This test was highly significant (𝑧=−3.97z=−3.97, 𝑝&lt;.0001p&lt;.0001), with a 95% confidence interval ranging from -1.0669 to -0.3622. The confidence interval not including zero further supports the conclusion that the vaccination significantly reduces the risk of tuberculosis.</p>
+<p>These model fit results can be obtained with <code>confint().</code> A key vizualization of effect sizes in a meta-analysis paper is the forest plot, and this can also be handled via <code>metafor</code> with the <code>forest()</code> function.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">confint</span>(model_1))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;"></th>
+<th style="text-align: right;">estimate</th>
+<th style="text-align: right;">ci.lb</th>
+<th style="text-align: right;">ci.ub</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">tau^2</td>
+<td style="text-align: right;">0.3132433</td>
+<td style="text-align: right;">0.1196953</td>
+<td style="text-align: right;">1.111486</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">tau</td>
+<td style="text-align: right;">0.5596815</td>
+<td style="text-align: right;">0.3459701</td>
+<td style="text-align: right;">1.054271</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">I^2(%)</td>
+<td style="text-align: right;">92.2213861</td>
+<td style="text-align: right;">81.9177227</td>
+<td style="text-align: right;">97.678090</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">H^2</td>
+<td style="text-align: right;">12.8557608</td>
+<td style="text-align: right;">5.5302769</td>
+<td style="text-align: right;">43.067984</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="fu">forest</span>(model_1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="1152"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>In this forest plot, mostly what we are looking for is at the bottom most diamond which represents the overall model for the meta-regression, as well as how many of the CIs include 0. These plots are highly cutomizable and can be built upon like below, allowing for researchers to also graph additional variables with information about the design.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">forest</span>(model_1,</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>       <span class="at">xlab =</span> <span class="st">"Effect Size (Log Relative Risk)"</span>, <span class="co"># Label for x-axis</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>       <span class="at">slab =</span> <span class="fu">paste</span>(dat.bcg<span class="sc">$</span>author, dat.bcg<span class="sc">$</span>year, <span class="at">sep=</span><span class="st">", "</span>), <span class="co"># Study labels</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>       <span class="at">ilab =</span> dat.bcg<span class="sc">$</span>alloc, <span class="co"># Additional column for treatment allocation method</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>       <span class="at">ilab.xpos =</span> <span class="sc">-</span><span class="dv">4</span>, <span class="co"># Position of the additional column</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>       <span class="at">xlim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">10</span>, <span class="dv">5</span>), <span class="co"># X-axis limits</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">cex =</span> <span class="fl">0.75</span>, <span class="co"># Text size</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">alim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">3</span>, <span class="dv">2</span>), <span class="co"># Limits for the x-axis (effect sizes)</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">at =</span> <span class="fu">log</span>(<span class="fu">c</span>(<span class="fl">0.1</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">4</span>, <span class="dv">8</span>)), <span class="co"># Custom ticks on x-axis</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="st">"blue"</span>, <span class="co"># Color for the summary polygon</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">border =</span> <span class="st">"darkblue"</span>, <span class="co"># Border color for the summary polygon</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">psize =</span> <span class="fl">1.5</span>, <span class="co"># Size of the points</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>       <span class="at">mlab =</span> <span class="st">"Random Effects Model"</span>, <span class="co"># Label for the summary effect</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>       <span class="at">order =</span> <span class="fu">order</span>(dat.bcg<span class="sc">$</span>year) <span class="co"># Order studies by year</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Additionally, the package <code>dmetar</code> offers a great deal of support for meta-regression beyond the <code>metafor</code> package and accepts <code>rma</code> objects for many of its functions. For example, a crucial aspect of meta-analysis (and meta-regression) is outlier analysis. This is typically done in advance of analysis via a <a href="https://rpubs.com/DragonflyStats/Cooks-Distance">Cook’s test</a>, but can also be done via the <code>find.outliers()</code> package.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">find.outliers</span>(model_1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Identified outliers (REML) 
+------------------------- 
+"4", "8" 
+ 
+Results with outliers removed 
+----------------------------- 
+
+Random-Effects Model (k = 11; tau^2 estimator: REML)
+
+tau^2 (estimated amount of total heterogeneity): 0.2281 (SE = 0.1501)
+tau (square root of estimated tau^2 value):      0.4776
+I^2 (total heterogeneity / total variability):   83.01%
+H^2 (total variability / sampling variability):  5.89
+
+Test for Heterogeneity:
+Q(df = 10) = 39.6122, p-val &lt; .0001
+
+Model Results:
+
+estimate      se     zval    pval    ci.lb    ci.ub      
+ -0.7082  0.1784  -3.9701  &lt;.0001  -1.0578  -0.3586  *** 
+
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>Here, the results show us what the outliers were, as well as the results with those outliers removed. here we can see that the <span class="math inline">\(I^2\)</span> was substantially lowered by removing those outliers. We can then use this code to fit into forest again and build a plot of the new results.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">forest</span>(<span class="fu">find.outliers</span>(model_1))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="mixed-effect-models" class="level3">
+<h3 class="anchored" data-anchor-id="mixed-effect-models">Mixed Effect Models</h3>
+<p>While fitting a random-effects model allows researchers to partially handle dependence in effects from any given paper, part of heterogeneity in analysis could be due to moderators. rma also allows researchers to fit a mixed-effect model relatively easy.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>mef_1 <span class="ot">&lt;-</span> <span class="fu">rma</span>(yi, vi, <span class="at">mods =</span> <span class="sc">~</span> ablat <span class="sc">+</span> year, <span class="at">data =</span> data_es)</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(mef_1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Mixed-Effects Model (k = 13; tau^2 estimator: REML)
+
+  logLik  deviance       AIC       BIC      AICc   
+ -8.1069   16.2137   24.2137   25.4241   32.2137   
+
+tau^2 (estimated amount of residual heterogeneity):     0.1108 (SE = 0.0845)
+tau (square root of estimated tau^2 value):             0.3328
+I^2 (residual heterogeneity / unaccounted variability): 71.98%
+H^2 (unaccounted variability / sampling variability):   3.57
+R^2 (amount of heterogeneity accounted for):            64.63%
+
+Test for Residual Heterogeneity:
+QE(df = 10) = 28.3251, p-val = 0.0016
+
+Test of Moderators (coefficients 2:3):
+QM(df = 2) = 12.2043, p-val = 0.0022
+
+Model Results:
+
+         estimate       se     zval    pval     ci.lb    ci.ub     
+intrcpt   -3.5455  29.0959  -0.1219  0.9030  -60.5724  53.4814     
+ablat     -0.0280   0.0102  -2.7371  0.0062   -0.0481  -0.0080  ** 
+year       0.0019   0.0147   0.1299  0.8966   -0.0269   0.0307     
+
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+</div>
+<p>The estimated residual heterogeneity is 𝜏^2=0.1108τ^2=0.1108, indicating that incorporating the two moderators in the model accounts for 65% of the total heterogeneity ((0.3132−0.1108)/0.3132(0.3132−0.1108)/0.3132). The omnibus test shows that we can reject the null hypothesis 𝐻0:𝛽1=𝛽2=0H0​:β1​=β2​=0 (QM = 12.20, df = 2, p &lt; 0.01), implying that the moderators collectively have a significant effect. However, only absolute latitude significantly influences vaccine effectiveness (for 𝐻0:𝛽1=0H0​:β1​=0, z = -2.74, p &lt; 0.01), while the other moderator does not (for 𝐻0:𝛽2=0H0​:β2​=0, z = 0.13, p = 0.90). The significant test for residual heterogeneity (QE = 28.33, df = 10, p &lt; 0.01) suggests that there may be other unconsidered moderators affecting vaccine effectiveness.</p>
+<p>We can then compare these two models in a number of ways, starting first with an anova test, comparing the models similarly to how one would compare two nested regression models.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">anova</span>(mef_1, model_1)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Warning: REML comparisons not meaningful for models with different fixed effects
+(use 'refit=TRUE' to refit both models based on ML estimation).</code></pre>
+</div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+        df     AIC     BIC    AICc   logLik    LRT   pval       QE  tau^2 
+Full     4 24.2137 25.4241 32.2137  -8.1069                28.3251 0.1108 
+Reduced  2 28.4047 29.3746 29.7381 -12.2024 8.1910 0.0166 152.2330 0.3132 
+             R^2 
+Full             
+Reduced 64.6322% </code></pre>
+</div>
+</div>
+<p>Here, we see the the full model was a better fit (as indicated by a lower AIC) than the reduced model. We can also visualize the model comparison via funnel plots. The <strong><code>funnel()</code></strong> function generates funnel plots, which are useful for detecting heterogeneity and certain types of publication bias (Rothstein et al.&nbsp;2005). For models without moderators, the plot displays the observed outcomes on the horizontal axis and their corresponding standard errors (i.e., the square root of the sampling variances) on the vertical axis. A vertical line represents the model estimate, with a pseudo confidence interval region around this estimate, bounded by ±1.96 * SE, where SE is the standard error from the vertical axis. For models with moderators, the plot shows residuals on the horizontal axis against their corresponding standard errors, with a vertical line at zero and a pseudo confidence interval region of ±1.96 * SE.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="fu">funnel</span>(model_1, <span class="at">main =</span> <span class="st">"Random-Effects Model"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-11-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">funnel</span>(mef_1, <span class="at">main =</span> <span class="st">"Mixed-Effects Model"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="index_files/figure-html/unnamed-chunk-11-2.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="multilevel-meta-analysis" class="level3">
+<h3 class="anchored" data-anchor-id="multilevel-meta-analysis">Multilevel Meta-Analysis</h3>
+<p>Meta-analysis has multiple levels due to the way data is structured. In the random-effects model, two sources of variability are accounted for: the sampling error <span class="math inline">\(\epsilon_k\)</span>of individual studies and the between-study heterogeneity <span class="math inline">\(\zeta_k\)</span>. The goal is to estimate the mean μ of the distribution of true effect sizes.</p>
+<p>These two error terms correspond to two levels in meta-analysis data: the participant level (level 1) and the study level (level 2). At the participant level, data often reaches us in pooled form (e.g., means and standard deviations). Pooling at the study level is performed as part of the meta-analysis. Participants are nested within studies, creating a multilevel structure implicitly described by the random-effects model.</p>
+</section>
+<section id="extending-to-a-three-level-model" class="level3">
+<h3 class="anchored" data-anchor-id="extending-to-a-three-level-model"><strong>Extending to a Three-Level Model</strong></h3>
+<p><span class="math inline">\(\hat{\theta}{ij} = \mu + \zeta^{(2)}{ij} + \zeta^{(3)}{j} + \epsilon{ij}\)</span></p>
+<p>Statistical independence is crucial when pooling effect sizes in meta-analysis. Dependency between effect sizes can reduce heterogeneity and lead to false-positive results. Dependencies can arise from study authors (e.g., multiple sites or interventions within a study) or the meta-analyst (e.g., studies from different cultural regions).</p>
+<p>To account for such dependencies, we can introduce a third level in the meta-analysis model. This level can capture nested structures within studies or among clusters of studies. A three-level model explicitly incorporates these dependencies, improving the accuracy of our meta-analytic estimates.</p>
+<p>A three-level model involves three pooling steps: aggregating participant data within studies, nesting effect sizes within clusters, and pooling cluster effects to estimate the overall true effect size (μ). This model explicitly accounts for within-cluster and between-cluster heterogeneity, represented by two heterogeneity terms: <span class="math inline">\(\zeta^{(2)}_{ij}\)</span> (within-cluster) and <span class="math inline">\(\zeta^{(3)}_{j}\)</span>​ (between-cluster).</p>
+</section>
+<section id="multilevel-models-in-r" class="level3">
+<h3 class="anchored" data-anchor-id="multilevel-models-in-r">Multilevel Models in R</h3>
+<p>These models are particularly well suited to being carried out in the <code>metafor</code> package as well, though using a different function - the <code>rma.mv()</code> function. Below we will make use of the <code>Chernobyl</code> dataset from <code>dmetar</code>. Below we specify a model that is largely similar to our models from earlier but with different clustering.</p>
+<p>Via the <strong><code>random</code></strong> argument, we specify a formula which defines the (nested) random effects. For a three-level model, the formula always starts with <code>~ 1</code>, followed by a vertical bar <code>|</code>. Behind the vertical bar, we assign a <strong>random effect</strong> to a grouping variable (such as studies, measures, regions, etc.). This random intercept is the same conceptually to those implemented in mixed-effects models researchers may be more accustomed to.</p>
+<p>There is a specific syntax in which we can instruct <strong><code>rma.mv</code></strong> to assume nested random effects. This is achieved by using a slash (/) to separate the higher- and lower-level grouping variables. On the left side of the slash, we place the level 3 (cluster) variable, and on the right side, we insert the lower-level variable nested within the larger cluster. The general structure of the formula is: <strong><code>~ 1 | cluster/effects_within_cluster</code></strong>.</p>
+<p>For our example, we assume that individual effect sizes (level 2, defined by <strong><code>es.id</code></strong>) are nested within studies (level 3, defined by <strong><code>author</code></strong>). This results in the following formula: <strong><code>~ 1 | author/es.id</code></strong>.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(esc)</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">"Chernobyl"</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>full.model <span class="ot">&lt;-</span> <span class="fu">rma.mv</span>(<span class="at">yi =</span> z, </span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>                     <span class="at">V =</span> var.z, </span>
+<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>                     <span class="at">slab =</span> author,</span>
+<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>                     <span class="at">data =</span> Chernobyl,</span>
+<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">random =</span> <span class="sc">~</span> <span class="dv">1</span> <span class="sc">|</span> author<span class="sc">/</span>es.id, </span>
+<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>                     <span class="at">test =</span> <span class="st">"t"</span>, </span>
+<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>                     <span class="at">method =</span> <span class="st">"REML"</span>)</span>
+<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(full.model)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>
+Multivariate Meta-Analysis Model (k = 33; method: REML)
+
+  logLik  Deviance       AIC       BIC      AICc   
+-21.1229   42.2458   48.2458   52.6430   49.1029   
+
+Variance Components:
+
+            estim    sqrt  nlvls  fixed        factor 
+sigma^2.1  0.1788  0.4229     14     no        author 
+sigma^2.2  0.1194  0.3455     33     no  author/es.id 
+
+Test for Heterogeneity:
+Q(df = 32) = 4195.8268, p-val &lt; .0001
+
+Model Results:
+
+estimate      se    tval  df    pval   ci.lb   ci.ub      
+  0.5231  0.1341  3.9008  32  0.0005  0.2500  0.7963  *** 
+
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">convert_z2r</span>(<span class="fl">0.52</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 0.4777</code></pre>
+</div>
+</div>
+<p>Converting this estimate to <span class="math inline">\(r\)</span>, we can see that there is a fairly large correlation of .48, indiciating a substantial relationship between exposure to radiation and mutation rates at Chernobyl.</p>
+</section>
+</section>
+<section id="conclusion" class="level2">
+<h2 class="anchored" data-anchor-id="conclusion">Conclusion</h2>
+<p>Meta-regression offers a bevy of methods and approaches for dealing with dependency and heterogeneity in meta-analysis that would be difficult to deal without clustering or moderators. In this guide I hope I laid out helpful packages for researchers to use and implement in meta-regression in the future.</p>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
